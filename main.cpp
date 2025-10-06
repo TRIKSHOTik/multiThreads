@@ -1,19 +1,19 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-#include <windows.h>
 #include <pthread.h>
 #include <fstream>
 #include <algorithm>
-#include <config.h>
 #include <chrono>
 #include <random>
 #include <ctime>
+
 #ifdef _WIN32
 #define USE_WINDOWS_THREADS
 #else
 #define USE_PTHREADS
 #endif
+
 struct ThreadData {
     std::vector<std::vector<int>>*A;
     std::vector<std::vector<int>>*B;
@@ -56,21 +56,21 @@ void multiplyMatrixByBlocks(std::vector<std::vector<int>>& A, std::vector<std::v
     }
 }
 
-// void threadedMultiply_thread(std::vector<std::vector<int>>& A, std::vector<std::vector<int>>& B, std::vector<std::vector<int>>& C,int blockSize) {
-//     int n = A.size();
-//
-//     std::vector<std::thread> threads;
-//
-//     for (int i = 0; i < n; i += blockSize) {
-//         for (int j = 0; j < n; j += blockSize) {
-//             threads.emplace_back(std::thread(multiplyMatrixByBlocks, ref(A), ref(B), ref(C), i, j, blockSize));
-//         }
-//     }
-//
-//     for (auto& t : threads) {
-//         t.join();
-//     }
-// }
+void threadedMultiply_thread(std::vector<std::vector<int>>& A, std::vector<std::vector<int>>& B, std::vector<std::vector<int>>& C,int blockSize) {
+    int n = A.size();
+
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < n; i += blockSize) {
+        for (int j = 0; j < n; j += blockSize) {
+            threads.emplace_back(std::thread(multiplyMatrixByBlocks, ref(A), ref(B), ref(C), i, j, blockSize));
+        }
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+}
 
 void * multiplyRows_pthread(void* arg) {
     ThreadData* data = (ThreadData*)arg;
@@ -126,7 +126,6 @@ int main() {
     auto file = "output.txt";
     std::ofstream out(file);
 
-
     std::vector<std::vector<int>> C(n, std::vector<int>(n, 0));
     std::vector<std::vector<int>> D(n, std::vector<int>(n, 0));
     std::vector<std::vector<int>> E(n, std::vector<int>(n, 0));
@@ -144,21 +143,22 @@ int main() {
     std::cout << "\nSimple multiply: " << static_cast<double> (durationSimple.count())/1000000 << " s" << std::endl;
     printMatrix(C, out);
 
-    std::cout << "\nMultithread multiply:" << std::endl;
-    // for (auto k : blockSizes) {
-    //     auto startThreaded = std::chrono::high_resolution_clock::now();
-    //     threadedMultiply_thread(A, B, D, k);
-    //     auto endThreaded = std::chrono::high_resolution_clock::now();
-    //     auto durationThreaded = std::chrono::duration_cast<std::chrono::microseconds>(endThreaded - startThreaded);
-    //
-    //     int blocksPerRow = k;
-    //     int totalBlocks = blocksPerRow * blocksPerRow;
-    //
-    //     std::cout << "Block size " << k << " (" << blocksPerRow << "x" << blocksPerRow
-    //         << " Blocks, " << totalBlocks << " threads): "
-    //         << static_cast<double> (durationThreaded.count())/1000000 << " s" << std::endl;
-    // }
-    std::cout << "\nMultithread multiply:" << std::endl;
+    std::cout << "\nstd::thread:" << std::endl;
+    for (auto k : blockSizes) {
+        auto startThreaded = std::chrono::high_resolution_clock::now();
+        threadedMultiply_thread(A, B, D, k);
+        auto endThreaded = std::chrono::high_resolution_clock::now();
+        auto durationThreaded = std::chrono::duration_cast<std::chrono::microseconds>(endThreaded - startThreaded);
+
+        int blocksPerRow = k;
+        int totalBlocks = blocksPerRow * blocksPerRow;
+
+        std::cout << "Block size " << k << " (" << blocksPerRow << "x" << blocksPerRow
+            << " Blocks, " << totalBlocks << " threads): "
+            << static_cast<double> (durationThreaded.count())/1000000 << " s" << std::endl;
+    }
+
+    std::cout << "\npthread:" << std::endl;
     for (auto k : blockSizes) {
         auto startThreaded = std::chrono::high_resolution_clock::now();
         threadedMultiply_pthread(A, B, E, k);
