@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 4.0)
 project(multiThreads)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Threads REQUIRED)
+add_executable(multiThreads main.cpp)
 
-set(CMAKE_CXX_STANDARD 20)
-
-add_executable(multiThreads main.cpp
-        Thread.cpp
-        Thread.h)
+include_directories("pthread-win32-2.10.0-winbuild")
+link_directories("pthread-win32-2.10.0-winbuild")
+if(CMAKE_USE_PTHREADS_INIT)
+    target_link_libraries(multiThreads Threads::Threads)
+endif()
